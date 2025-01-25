@@ -21,7 +21,9 @@ export function formatNumberWithDecimal(num: number): string {
 export function formatError(error: any) {
   if (error.name === "ZodError") {
     // handle zod error
-    return error.errors.map((e) => `${e.message}.`).join(" ");
+    return error.errors
+      .map((e: { message: string }) => `${e.message}.`)
+      .join(" ");
   } else if (
     error.name === "PrismaClientKnownRequestError" &&
     error.code === "P2002"
