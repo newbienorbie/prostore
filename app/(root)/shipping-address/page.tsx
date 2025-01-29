@@ -1,35 +1,40 @@
 import { auth } from "@/auth";
-import { getMyCart } from "@/lib/actions/cart.actions";
-import { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { prisma } from "@/db/prisma";
 import { ShippingAddress } from "@/types";
-import { getUserById } from "@/lib/actions/user.actions";
+import { redirect } from "next/navigation";
 import ShippingAddressForm from "./shipping-address-form";
-import CheckoutSteps from "@/components/shared/checkout-steps";
+import { convertToPlainObject } from "@/lib/utils";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Shipping Address",
 };
 
-const ShippingAddressPage = async () => {
-  const cart = await getMyCart();
-
-  if (!cart || cart.items.length === 0) redirect("/cart");
-
+async function getShippingAddress() {
   const session = await auth();
 
-  const userId = session?.user?.id;
+  if (!session?.user?.id) {
+    redirect("/sign-in");
+  }
 
-  if (!userId) redirect("/sign-in");
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { address: true },
+  });
 
-  const user = await getUserById(userId);
+  if (user?.address) {
+    // Convert the JSON data to ShippingAddress type
+    return convertToPlainObject(user.address) as ShippingAddress;
+  }
+
+  return null;
+}
+
+export default async function ShippingAddressPage() {
+  const address = await getShippingAddress();
 
   return (
-    <>
-      <CheckoutSteps current={1} />
-      <ShippingAddressForm address={user.address as ShippingAddress} />
-    </>
+    <main className="container">
+      <ShippingAddressForm address={address} />
+    </main>
   );
-};
-
-export default ShippingAddressPage;
+}

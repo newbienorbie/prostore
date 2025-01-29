@@ -6,6 +6,9 @@ import { compareSync } from "bcrypt-ts-edge";
 import type { NextAuthConfig } from "next-auth";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { CartItem } from "./types";
+import { calcPrice } from "./lib/utils";
 
 export const config = {
   pages: {
@@ -83,34 +86,73 @@ export const config = {
         if (user.name === "NO_NAME") {
           token.name = user.email.split("@")[0];
 
-          // update database to reflect the token name
-
           await prisma.user.update({
             where: { id: user.id },
             data: { name: token.name },
           });
         }
-        if (trigger === "signIn" || "signUp") {
-          const cookiesObject = await cookies();
-          const sessionCartId = cookiesObject.get("sessionCartId")?.value;
 
-          if (sessionCartId) {
-            const sessionCart = await prisma.cart.findFirst({
-              where: { sessionCartId },
-            });
+        // Handle cart merging during sign in/sign up
+        if (trigger === "signIn" || trigger === "signUp") {
+          try {
+            const cookiesObject = await cookies();
+            const sessionCartId = cookiesObject.get("sessionCartId")?.value;
 
-            if (sessionCart) {
-              // delete current user cart
-              await prisma.cart.deleteMany({
-                where: { userId: user.id },
+            if (sessionCartId) {
+              const sessionCart = await prisma.cart.findFirst({
+                where: { sessionCartId },
               });
 
-              // assign new cart
-              await prisma.cart.update({
-                where: { id: sessionCart.id },
-                data: { userId: user.id },
-              });
+              if (sessionCart) {
+                // Try to find existing user cart
+                const userCart = await prisma.cart.findFirst({
+                  where: { userId: user.id },
+                });
+
+                if (userCart) {
+                  // Merge items from session cart into user cart
+                  const sessionItems = sessionCart.items as CartItem[];
+                  const userItems = userCart.items as CartItem[];
+
+                  // Combine items, merging quantities for same products
+                  const mergedItems = [...userItems];
+
+                  sessionItems.forEach((sessionItem) => {
+                    const existingItem = mergedItems.find(
+                      (item) => item.productId === sessionItem.productId
+                    );
+                    if (existingItem) {
+                      existingItem.qty += sessionItem.qty;
+                    } else {
+                      mergedItems.push(sessionItem);
+                    }
+                  });
+
+                  // Calculate new prices
+                  const prices = calcPrice(mergedItems);
+
+                  // Update user cart with merged items and new prices
+                  await prisma.cart.update({
+                    where: { id: userCart.id },
+                    data: {
+                      items: mergedItems as Prisma.CartUpdateitemsInput[],
+                      ...prices,
+                    },
+                  });
+                } else {
+                  // Convert session cart to user cart
+                  await prisma.cart.update({
+                    where: { id: sessionCart.id },
+                    data: {
+                      userId: user.id,
+                      sessionCartId: undefined,
+                    },
+                  });
+                }
+              }
             }
+          } catch (error) {
+            console.error("Error merging carts:", error);
           }
         }
       }
@@ -124,6 +166,23 @@ export const config = {
     },
 
     authorized({ request, auth }: any) {
+      // array of regex patterns of paths we want to protect
+      const protectedPaths = [
+        /\/shipping-address/,
+        /\/payment-method/,
+        /\/place-order/,
+        /\/profile/,
+        /\/user\/(.*)/,
+        /\/order\/(.*)/,
+        /\/admin/,
+      ];
+
+      // get pathname from the req URL object
+      const { pathname } = request.nextUrl;
+
+      // check if user is not authenticated and accessing a protected path
+      if (!auth && protectedPaths.some((p) => p.test(pathname))) return false;
+
       // check for session cart cookie from user's cart uuid
       if (!request.cookies.get("sessionCartId")) {
         // generate new session cart id cookie

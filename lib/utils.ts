@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { CartItem } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -66,3 +67,33 @@ export function formatCurrency(amount: number | string | null) {
     return "NaN";
   }
 }
+
+export const calcPrice = (items: CartItem[]) => {
+  // Ensure we have valid items
+  if (!Array.isArray(items) || items.length === 0) {
+    return {
+      itemsPrice: "0.00",
+      shippingPrice: "0.00",
+      taxPrice: "0.00",
+      totalPrice: "0.00",
+    };
+  }
+
+  const itemsPrice = items.reduce((acc, item) => {
+    const price =
+      typeof item.price === "string" ? parseFloat(item.price) : item.price;
+    return acc + price * (item.qty || 0);
+  }, 0);
+
+  const roundedItemsPrice = round2(itemsPrice);
+  const shippingPrice = roundedItemsPrice > 100 ? 0 : 10;
+  const taxPrice = round2(roundedItemsPrice * 0.15);
+  const totalPrice = round2(roundedItemsPrice + shippingPrice + taxPrice);
+
+  return {
+    itemsPrice: roundedItemsPrice.toFixed(2),
+    shippingPrice: shippingPrice.toFixed(2),
+    taxPrice: taxPrice.toFixed(2),
+    totalPrice: totalPrice.toFixed(2),
+  };
+};

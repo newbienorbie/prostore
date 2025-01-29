@@ -2,28 +2,21 @@
 
 import { CartItem } from "@/types";
 import { cookies } from "next/headers";
-import { convertToPlainObject, formatError, round2 } from "../utils";
+import { convertToPlainObject, formatError } from "../utils";
 import { auth } from "@/auth";
 import { prisma } from "@/db/prisma";
 import { cartItemSchema, insertCartSchema } from "../validators";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { calcPrice } from "../utils";
 
-// calculate cart prices
-const calcPrice = (items: CartItem[]) => {
-  const itemsPrice = round2(
-      items.reduce((acc, item) => acc + Number(item.price) * item.qty, 0)
-    ),
-    shippingPrice = round2(itemsPrice > 100 ? 0 : 10),
-    taxPrice = round2(0.15 * itemsPrice),
-    totalPrice = round2(itemsPrice + shippingPrice + taxPrice);
-
-  return {
-    itemsPrice: itemsPrice.toFixed(2),
-    shippingPrice: shippingPrice.toFixed(2),
-    taxPrice: taxPrice.toFixed(2),
-    totalPrice: totalPrice.toFixed(2),
-  };
+// Helper function to revalidate all cart-related paths
+const revalidateCartPaths = (productSlug?: string) => {
+  revalidatePath("/cart");
+  revalidatePath("/"); // Revalidate home page if it shows cart state
+  if (productSlug) {
+    revalidatePath(`/product/${productSlug}`);
+  }
 };
 
 export async function addItemToCart(data: CartItem) {
@@ -63,8 +56,8 @@ export async function addItemToCart(data: CartItem) {
         data: newCart,
       });
 
-      // revalidate product page
-      revalidatePath(`/product/${product.slug}`);
+      // revalidate paths
+      revalidateCartPaths(product.slug);
 
       return {
         success: true,
@@ -103,7 +96,8 @@ export async function addItemToCart(data: CartItem) {
         },
       });
 
-      revalidatePath(`/product/${product.slug}`);
+      // revalidate paths
+      revalidateCartPaths(product.slug);
 
       return {
         success: true,
@@ -121,30 +115,35 @@ export async function addItemToCart(data: CartItem) {
 }
 
 export async function getMyCart() {
-  // check for cart cookie
-  const sessionCartId = (await cookies()).get("sessionCartId")?.value;
-  if (!sessionCartId) throw new Error("Cart session not found");
+  try {
+    // check for cart cookie
+    const sessionCartId = (await cookies()).get("sessionCartId")?.value;
+    if (!sessionCartId) throw new Error("Cart session not found");
 
-  // get session and user ID
-  const session = await auth();
-  const userId = session?.user?.id ? (session.user.id as string) : undefined;
+    // get session and user ID
+    const session = await auth();
+    const userId = session?.user?.id ? (session.user.id as string) : undefined;
 
-  // get user cart from database
-  const cart = await prisma.cart.findFirst({
-    where: userId ? { userId: userId } : { sessionCartId: sessionCartId },
-  });
+    // get user cart from database
+    const cart = await prisma.cart.findFirst({
+      where: userId ? { userId: userId } : { sessionCartId: sessionCartId },
+    });
 
-  if (!cart) return undefined;
+    if (!cart) return undefined;
 
-  // convert decimals and return
-  return convertToPlainObject({
-    ...cart,
-    items: cart.items as CartItem[],
-    itemsPrice: cart.itemsPrice.toString(),
-    totalPrice: cart.totalPrice.toString(),
-    shippingPrice: cart.shippingPrice.toString(),
-    taxPrice: cart.taxPrice.toString(),
-  });
+    // convert decimals and return
+    return convertToPlainObject({
+      ...cart,
+      items: cart.items as CartItem[],
+      itemsPrice: cart.itemsPrice.toString(),
+      totalPrice: cart.totalPrice.toString(),
+      shippingPrice: cart.shippingPrice.toString(),
+      taxPrice: cart.taxPrice.toString(),
+    });
+  } catch (error) {
+    console.error("Error in getMyCart:", error);
+    return undefined;
+  }
 }
 
 export async function removeItemFromCart(productId: string) {
@@ -190,7 +189,8 @@ export async function removeItemFromCart(productId: string) {
       },
     });
 
-    revalidatePath(`product/${product.slug}`);
+    // revalidate paths
+    revalidateCartPaths(product.slug);
 
     return {
       success: true,
