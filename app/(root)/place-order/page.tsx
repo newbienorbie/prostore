@@ -75,8 +75,8 @@ const PlaceOrderPage = async () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead className="text-center">Quantity</TableHead>
+                    <TableHead className="text-center">Price</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -96,11 +96,9 @@ const PlaceOrderPage = async () => {
                           <span className="px-2">{item.name}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
-                        <span className="px-2">{item.qty}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${item.price}
+                      <TableCell className="text-center">{item.qty}</TableCell>
+                      <TableCell className="text-center">
+                        {formatCurrency(item.price)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -124,7 +122,7 @@ const PlaceOrderPage = async () => {
                 <div>Shipping</div>
                 <div>{formatCurrency(cart.shippingPrice)}</div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between font-semibold">
                 <div>Total</div>
                 <div>{formatCurrency(cart.totalPrice)}</div>
               </div>

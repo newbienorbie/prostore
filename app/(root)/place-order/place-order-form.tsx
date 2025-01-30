@@ -17,9 +17,7 @@ const PlaceOrderForm = () => {
     setIsLoading(true);
 
     try {
-      console.log("Submitting order...");
       const res = await createOrder();
-      console.log("Order response:", res);
 
       if (!res) {
         throw new Error("No response from createOrder");
@@ -28,11 +26,10 @@ const PlaceOrderForm = () => {
       if (res.success) {
         // If there's a specific redirect URL
         if (res.redirectTo) {
-          console.log("Redirecting to:", res.redirectTo);
           router.push(res.redirectTo);
         } else {
           // Default redirect if no specific URL
-          console.log("Redirecting to order success page");
+
           router.push("/order/success");
         }
       } else {
@@ -43,7 +40,6 @@ const PlaceOrderForm = () => {
         });
       }
     } catch (error) {
-      console.error("Error placing order:", error);
       toast({
         variant: "destructive",
         title: "Error",
