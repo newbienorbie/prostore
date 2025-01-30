@@ -43,7 +43,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                 <TableRow>
                   <TableHead>Item</TableHead>
                   <TableHead className="text-center">Quantity</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-center">Price</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -114,7 +114,9 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                         )}
                       </Button>
                     </TableCell>
-                    <TableCell className="text-right">${item.price}</TableCell>
+                    <TableCell className="text-center">
+                      {formatCurrency(item.price)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

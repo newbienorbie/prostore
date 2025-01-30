@@ -1,15 +1,15 @@
+// lib/actions/order.actions.ts
 "use server";
 
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { formatError } from "../utils";
+import { convertToPlainObject, formatError } from "../utils";
+import { auth } from "@/auth";
 import { getMyCart } from "./cart.actions";
 import { getUserById } from "./user.actions";
-import { auth } from "@/auth";
 import { insertOrderSchema } from "../validators";
 import { prisma } from "@/db/prisma";
 import { CartItem } from "@/types";
 
-// create order and create order items
 export async function createOrder() {
   try {
     const session = await auth();
@@ -17,7 +17,6 @@ export async function createOrder() {
 
     const cart = await getMyCart();
     const userId = session?.user?.id;
-
     if (!userId) throw new Error("User not found");
 
     const user = await getUserById(userId);
@@ -46,8 +45,8 @@ export async function createOrder() {
       };
     }
 
-    // create order object
-    const order = insertOrderSchema.parse({
+    // Create order object with correct types for Prisma
+    const orderData = {
       userId: user.id,
       shippingAddress: user.address,
       paymentMethod: user.paymentMethod,
@@ -55,14 +54,22 @@ export async function createOrder() {
       shippingPrice: cart.shippingPrice,
       taxPrice: cart.taxPrice,
       totalPrice: cart.totalPrice,
-    });
+      isPaid: false,
+      paidAt: null,
+      deliveredAt: null,
+    };
 
-    // create a transaction to create order and order items in database
+    // Validate with zod schema
+    insertOrderSchema.parse(orderData);
+
+    // Create a transaction to create order and order items in database
     const insertedOrderId = await prisma.$transaction(async (tx) => {
-      // create order
-      const insertedOrder = await tx.order.create({ data: order });
+      // Create order with the correct Prisma input type
+      const insertedOrder = await tx.order.create({
+        data: orderData,
+      });
 
-      // create order items from cart items
+      // Create order items from the cart items
       for (const item of cart.items as CartItem[]) {
         await tx.orderItem.create({
           data: {
@@ -73,7 +80,7 @@ export async function createOrder() {
         });
       }
 
-      // clear cart's database
+      // Clear cart
       await tx.cart.update({
         where: { id: cart.id },
         data: {
@@ -96,7 +103,21 @@ export async function createOrder() {
       redirectTo: `/order/${insertedOrderId}`,
     };
   } catch (error) {
+    console.error("Order creation error:", error);
     if (isRedirectError(error)) throw error;
     return { success: false, message: formatError(error) };
   }
+}
+
+// get order by id
+export async function getOrderById(orderId: string) {
+  const data = await prisma.order.findFirst({
+    where: { id: orderId },
+    include: {
+      orderitems: true,
+      user: { select: { name: true, email: true } },
+    },
+  });
+
+  return convertToPlainObject(data);
 }

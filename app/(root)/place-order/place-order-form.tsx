@@ -1,46 +1,69 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { createOrder } from "@/lib/actions/order.actions";
 import { Check, Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useFormStatus } from "react-dom";
-import { createOrder } from "@/lib/actions/order.actions";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Place Order",
-};
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const PlaceOrderForm = () => {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setIsLoading(true);
 
-    const res = await createOrder();
+    try {
+      console.log("Submitting order...");
+      const res = await createOrder();
+      console.log("Order response:", res);
 
-    if (res.redirectTo) {
-      router.push(res.redirectTo);
+      if (!res) {
+        throw new Error("No response from createOrder");
+      }
+
+      if (res.success) {
+        // If there's a specific redirect URL
+        if (res.redirectTo) {
+          console.log("Redirecting to:", res.redirectTo);
+          router.push(res.redirectTo);
+        } else {
+          // Default redirect if no specific URL
+          console.log("Redirecting to order success page");
+          router.push("/order/success");
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: res.message || "Failed to place order",
+        });
+      }
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to place order. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const PlaceOrderButton = () => {
-    const { pending } = useFormStatus();
-    return (
-      <Button disabled={pending} className="w-full">
-        {pending ? (
-          <Loader className="w-4 h-4 animate-spin" />
-        ) : (
-          <Check className="w-4 h-4" />
-        )}{" "}
-        Place Order
-      </Button>
-    );
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="w-full">
-      <PlaceOrderButton />
+    <form className="w-full" onSubmit={handleSubmit}>
+      <Button disabled={isLoading} className="w-full">
+        {isLoading ? (
+          <Loader className="w-4 h-4 animate-spin mr-2" />
+        ) : (
+          <Check className="w-4 h-4 mr-2" />
+        )}
+        {isLoading ? "Processing..." : "Place Order"}
+      </Button>
     </form>
   );
 };
