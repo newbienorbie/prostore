@@ -6,11 +6,21 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { setCookie } from "@/lib/utils";
 
-const PlaceOrderForm = () => {
+interface PlaceOrderFormProps {
+  completedSteps: number[];
+}
+
+const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ completedSteps }) => {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+
+  const updateCompletedSteps = () => {
+    const newSteps = Array.from(new Set([...completedSteps, 3]));
+    setCookie("completedSteps", JSON.stringify(newSteps));
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -24,12 +34,11 @@ const PlaceOrderForm = () => {
       }
 
       if (res.success) {
-        // If there's a specific redirect URL
+        updateCompletedSteps();
+
         if (res.redirectTo) {
           router.push(res.redirectTo);
         } else {
-          // Default redirect if no specific URL
-
           router.push("/order/success");
         }
       } else {
@@ -39,6 +48,7 @@ const PlaceOrderForm = () => {
           description: res.message || "Failed to place order",
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast({
         variant: "destructive",

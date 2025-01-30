@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useTransition } from "react";
+import { useTransition, useEffect, useState } from "react";
 import { paymentMethodSchema } from "@/lib/validators";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -19,17 +19,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useEffect, useState } from "react";
 import { updateUserPaymentMethod } from "@/lib/actions/user.actions";
+import { setCookie } from "@/lib/utils";
 
-const PaymentMethodForm = ({
-  preferredPaymentMethod,
-}: {
+interface PaymentMethodFormProps {
   preferredPaymentMethod: string | null;
+  completedSteps: number[];
+}
+
+const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({
+  preferredPaymentMethod,
+  completedSteps,
 }) => {
   const router = useRouter();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof paymentMethodSchema>>({
     resolver: zodResolver(paymentMethodSchema),
@@ -38,12 +43,14 @@ const PaymentMethodForm = ({
     },
   });
 
-  const [isPending, startTransition] = useTransition();
-
-  // Wait for client-side hydration to complete
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const updateCompletedSteps = () => {
+    const newSteps = Array.from(new Set([...completedSteps, 2]));
+    setCookie("completedSteps", JSON.stringify(newSteps));
+  };
 
   const onSubmit = async (values: z.infer<typeof paymentMethodSchema>) => {
     startTransition(async () => {
@@ -57,11 +64,11 @@ const PaymentMethodForm = ({
         return;
       }
 
+      updateCompletedSteps();
       router.push("/place-order");
     });
   };
 
-  // Don't render the form until after hydration
   if (!mounted) {
     return null;
   }

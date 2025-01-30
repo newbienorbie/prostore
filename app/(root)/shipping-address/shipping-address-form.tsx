@@ -3,7 +3,7 @@
 import { ShippingAddress } from "@/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { shippingAddressSchema } from "@/lib/validators";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ControllerRenderProps, useForm, SubmitHandler } from "react-hook-form";
@@ -29,16 +29,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { malaysiaStatesAndCities } from "@/lib/constants/locations";
+import { setCookie } from "@/lib/utils";
 
-const ShippingAddressForm = ({
-  address,
-}: {
+interface ShippingAddressFormProps {
   address: ShippingAddress | null;
+  completedSteps: number[];
+}
+
+const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
+  address,
+  completedSteps,
 }) => {
   const router = useRouter();
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+  const [cities, setCities] = useState<string[]>([]);
 
-  // 1. Define your form.
   const form = useForm<z.infer<typeof shippingAddressSchema>>({
     resolver: zodResolver(shippingAddressSchema),
     defaultValues: {
@@ -51,9 +57,6 @@ const ShippingAddressForm = ({
       country: address?.country || shippingAddressDefaultValue.country,
     },
   });
-
-  const [isPending, startTransition] = useTransition();
-  const [cities, setCities] = useState<string[]>([]);
 
   // Initialize cities based on default state
   useEffect(() => {
@@ -76,6 +79,14 @@ const ShippingAddressForm = ({
     setCities(newCities);
   };
 
+  const updateCompletedSteps = useCallback(() => {
+    const newSteps = [...completedSteps];
+    if (!newSteps.includes(1)) {
+      newSteps.push(1);
+    }
+    setCookie("completedSteps", JSON.stringify(newSteps));
+  }, [completedSteps]);
+
   const onSubmit: SubmitHandler<z.infer<typeof shippingAddressSchema>> = async (
     values
   ) => {
@@ -90,6 +101,7 @@ const ShippingAddressForm = ({
         return;
       }
 
+      updateCompletedSteps();
       router.push("/payment-method");
     });
   };

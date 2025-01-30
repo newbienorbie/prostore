@@ -18,6 +18,18 @@ import {
 import Image from "next/image";
 import { formatCurrency } from "@/lib/utils";
 import PlaceOrderForm from "./place-order-form";
+import { cookies } from "next/headers";
+
+async function getCompletedSteps(): Promise<number[]> {
+  try {
+    const cookieStore = await cookies();
+    const completedStepsStr = cookieStore.get("completedSteps")?.value;
+    return completedStepsStr ? JSON.parse(completedStepsStr) : [0];
+  } catch (error) {
+    console.error("Error parsing completed steps:", error);
+    return [0];
+  }
+}
 
 const PlaceOrderPage = async () => {
   const cart = await getMyCart();
@@ -26,17 +38,21 @@ const PlaceOrderPage = async () => {
 
   if (!userId) throw new Error("User not found");
 
-  const user = await getUserById(userId);
+  const [user, completedSteps] = await Promise.all([
+    getUserById(userId),
+    getCompletedSteps(),
+  ]);
 
   if (!cart || cart.items.length === 0) redirect("/cart");
   if (!user.address) redirect("/shipping-address");
   if (!user.paymentMethod) redirect("/payment-method");
 
+  const updatedSteps = Array.from(new Set([...completedSteps, 0, 1, 2]));
   const userAddress = user.address as ShippingAddress;
 
   return (
-    <>
-      <CheckoutSteps />
+    <main className="container">
+      <CheckoutSteps current={3} completedSteps={updatedSteps} />
       <h1 className="py-4 text-2xl">Place Order</h1>
       <div className="grid md:grid-cols-3 md:gap-5">
         <div className="md:col-span-2 overflow-x-auto space-y-4">
@@ -110,15 +126,15 @@ const PlaceOrderPage = async () => {
         <div>
           <Card>
             <CardContent className="p-4 gap-4 space-y-4">
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <div>Items</div>
                 <div>{formatCurrency(cart.itemsPrice)}</div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <div>Tax</div>
                 <div>{formatCurrency(cart.taxPrice)}</div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between ">
                 <div>Shipping</div>
                 <div>{formatCurrency(cart.shippingPrice)}</div>
               </div>
@@ -126,12 +142,12 @@ const PlaceOrderPage = async () => {
                 <div>Total</div>
                 <div>{formatCurrency(cart.totalPrice)}</div>
               </div>
-              <PlaceOrderForm />
+              <PlaceOrderForm completedSteps={updatedSteps} />
             </CardContent>
           </Card>
         </div>
       </div>
-    </>
+    </main>
   );
 };
 
