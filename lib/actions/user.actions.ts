@@ -54,7 +54,7 @@ export async function signInWithCredentials(
 
 // sign user out
 export async function signOutUser() {
-  await signOut();
+  await signOut({ redirect: true, redirectTo: "/sign-in" });
 }
 
 // sign up user
