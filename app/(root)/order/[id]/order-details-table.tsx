@@ -132,7 +132,7 @@ const OrderDetailsTable = ({
           })
         }
       >
-        {isPending ? "processing..." : "Mark As Delivered"}
+        {isPending ? "Processing..." : "Mark as delivered"}
       </Button>
     );
   };
