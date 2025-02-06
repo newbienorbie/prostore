@@ -16,9 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Image from "next/image";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getPaymentMethodDisplay } from "@/lib/utils";
 import PlaceOrderForm from "./place-order-form";
 import { cookies } from "next/headers";
+import { PaymentMethodType } from "@/lib/constants";
 
 async function getCompletedSteps(): Promise<number[]> {
   try {
@@ -49,6 +50,9 @@ const PlaceOrderPage = async () => {
 
   const updatedSteps = Array.from(new Set([...completedSteps, 0, 1, 2]));
   const userAddress = user.address as ShippingAddress;
+  const paymentMethodDisplay = getPaymentMethodDisplay(
+    user.paymentMethod as PaymentMethodType
+  );
 
   return (
     <main className="container">
@@ -75,7 +79,7 @@ const PlaceOrderPage = async () => {
           <Card>
             <CardContent className="p-4 gap-4">
               <h2 className="text-xl pb-4">Payment Method</h2>
-              <p>{user.paymentMethod}</p>
+              <p>{paymentMethodDisplay}</p>
               <div className="mt-3">
                 <Link href="/payment-method">
                   <Button variant="outline">Edit</Button>

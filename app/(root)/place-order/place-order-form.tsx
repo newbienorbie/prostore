@@ -35,21 +35,17 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ completedSteps }) => {
 
       if (res.success) {
         updateCompletedSteps();
-
-        if (res.redirectTo) {
-          router.push(res.redirectTo);
-        } else {
-          router.push("/order/success");
-        }
+        router.push(res.redirectTo || "/order/success");
       } else {
+        console.error("Order creation failed:", res.message);
         toast({
           variant: "destructive",
           title: "Error",
           description: res.message || "Failed to place order",
         });
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
+      console.error("Order creation error:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -59,7 +55,6 @@ const PlaceOrderForm: React.FC<PlaceOrderFormProps> = ({ completedSteps }) => {
       setIsLoading(false);
     }
   };
-
   return (
     <form className="w-full" onSubmit={handleSubmit}>
       <Button disabled={isLoading} className="w-full">

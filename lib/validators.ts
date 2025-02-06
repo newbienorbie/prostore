@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { formatNumberWithDecimal } from "./utils";
-import { PAYMENT_METHODS } from "./constants";
+import { formatNumberWithDecimal, normalizePaymentMethod } from "./utils";
+import { PAYMENT_METHODS_INTERNAL, PaymentMethodType } from "./constants";
 
 const currency = z
   .string()
@@ -81,10 +81,18 @@ export const paymentMethodSchema = z
   .object({
     type: z.string().min(1, "Payment method is required"),
   })
-  .refine((data) => PAYMENT_METHODS.includes(data.type), {
-    path: ["type"],
-    message: "Invalid payment method",
-  });
+  .refine(
+    (data) => {
+      const normalizedInput = normalizePaymentMethod(data.type);
+      return PAYMENT_METHODS_INTERNAL.includes(
+        normalizedInput as PaymentMethodType
+      );
+    },
+    {
+      path: ["type"],
+      message: "Invalid payment method",
+    }
+  );
 
 // schema for inserting order
 export const insertOrderSchema = z.object({
@@ -93,9 +101,17 @@ export const insertOrderSchema = z.object({
   shippingPrice: currency,
   taxPrice: currency,
   totalPrice: currency,
-  paymentMethod: z.string().refine((data) => PAYMENT_METHODS.includes(data), {
-    message: "Invalid payment method",
-  }),
+  paymentMethod: z.string().refine(
+    (data) => {
+      const normalizedInput = normalizePaymentMethod(data);
+      return PAYMENT_METHODS_INTERNAL.includes(
+        normalizedInput as PaymentMethodType
+      );
+    },
+    {
+      message: "Invalid payment method",
+    }
+  ),
   shippingAddress: shippingAddressSchema,
   deliveredAt: z.date().nullable().optional(),
   isPaid: z.boolean().optional().default(false),

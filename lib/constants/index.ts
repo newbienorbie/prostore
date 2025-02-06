@@ -26,11 +26,24 @@ export const shippingAddressDefaultValue = {
   country: "",
 };
 
-export const PAYMENT_METHODS = process.env.PAYMENT_METHODS
-  ? process.env.PAYMENT_METHODS.split(", ")
-  : ["PayPal", "Stripe", "Touch 'n Go", "Cash on Delivery"];
+export const PAYMENT_METHODS_INTERNAL = [
+  "Paypal",
+  "Stripe",
+  "Touchngo",
+  "Cashondelivery",
+] as const;
 
-export const DEFAULT_PAYMENT_METHOD =
-  process.env.DEFAULT_PAYMENT_METHOD || "Touch 'n Go";
+export type PaymentMethodType = (typeof PAYMENT_METHODS_INTERNAL)[number];
+
+export const PAYMENT_METHOD_MAPPINGS: Record<PaymentMethodType, string> = {
+  Paypal: "PayPal",
+  Stripe: "Stripe",
+  Touchngo: "Touch 'n Go",
+  Cashondelivery: "Cash on Delivery",
+};
+
+export const PAYMENT_METHODS_DISPLAY = Object.values(PAYMENT_METHOD_MAPPINGS);
+
+export const DEFAULT_PAYMENT_METHOD: PaymentMethodType = "Touchngo";
 
 export const PAGE_SIZE = Number(process.env.PAGE_SIZE) || 12;

@@ -1,4 +1,3 @@
-// payment-method/page.tsx
 import { auth } from "@/auth";
 import { getUserById } from "@/lib/actions/user.actions";
 import PaymentMethodForm from "./payment-method-form";

@@ -7,15 +7,15 @@ import React from "react";
 const links = [
   {
     title: "Overview",
-    href: "/admin/overview",
+    href: "/admin/dashboard",
   },
   {
     title: "Products",
     href: "/admin/products",
   },
   {
-    title: "Order",
-    href: "/admin/order",
+    title: "Orders",
+    href: "/admin/orders",
   },
   {
     title: "Users",

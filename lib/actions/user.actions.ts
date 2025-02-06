@@ -10,9 +10,18 @@ import { auth, signIn, signOut } from "@/auth";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { compareSync, hashSync } from "bcrypt-ts-edge";
 import { prisma } from "@/db/prisma";
-import { formatError } from "../utils";
+import {
+  formatError,
+  getPaymentMethodDisplay,
+  normalizePaymentMethod,
+} from "../utils";
 import { ShippingAddress } from "@/types";
 import { z } from "zod";
+import {
+  DEFAULT_PAYMENT_METHOD,
+  PAYMENT_METHODS_INTERNAL,
+  type PaymentMethodType,
+} from "../constants";
 
 // sign in the user with credentials
 export async function signInWithCredentials(
@@ -100,8 +109,20 @@ export async function getUserById(userId: string) {
   const user = await prisma.user.findFirst({
     where: { id: userId },
   });
+
   if (!user) throw new Error("User not found");
-  return user;
+
+  // Get internal format for payment method
+  const paymentMethod = normalizePaymentMethod(
+    user.paymentMethod || DEFAULT_PAYMENT_METHOD
+  );
+
+  // Return user with normalized payment method
+  return {
+    ...user,
+    paymentMethod,
+    paymentMethodDisplay: getPaymentMethodDisplay(paymentMethod),
+  };
 }
 
 // update user's address
@@ -143,16 +164,33 @@ export async function updateUserPaymentMethod(
 
     if (!currentUser) throw new Error("User not found");
 
+    // Validate the payment method
     const paymentMethod = paymentMethodSchema.parse(data);
 
+    // Convert to internal format
+    const internalPaymentMethod = normalizePaymentMethod(paymentMethod.type);
+
+    // Check if the normalized payment method is in our allowed list
+    // Type assertion here is safe because we've validated it through the schema
+    if (
+      !PAYMENT_METHODS_INTERNAL.includes(
+        internalPaymentMethod as PaymentMethodType
+      )
+    ) {
+      throw new Error("Invalid payment method");
+    }
+
+    // Store internal format in database
     await prisma.user.update({
       where: { id: currentUser.id },
-      data: { paymentMethod: paymentMethod.type },
+      data: {
+        paymentMethod: internalPaymentMethod as PaymentMethodType,
+      },
     });
 
     return {
       success: true,
-      message: "User updated successfully",
+      message: "Payment method updated successfully",
     };
   } catch (error) {
     return {

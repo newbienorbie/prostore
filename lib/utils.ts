@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { CartItem } from "@/types";
 import qs from "query-string";
+import { PAYMENT_METHOD_MAPPINGS } from "./constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -67,6 +68,13 @@ export function formatCurrency(amount: number | string | null) {
   } else {
     return "NaN";
   }
+}
+
+// format number
+const NUMBER_FORMATTER = new Intl.NumberFormat("en-MY");
+
+export function formatNumber(number: number) {
+  return NUMBER_FORMATTER.format(number);
 }
 
 export const calcPrice = (items: CartItem[]) => {
@@ -175,3 +183,26 @@ export function formUrlQuery({
     }
   );
 }
+
+export const normalizePaymentMethod = (method: string): string => {
+  const normalized = method
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+
+  // Return matching internal name
+  const internalName = Object.keys(PAYMENT_METHOD_MAPPINGS).find(
+    (key) => key.toLowerCase() === normalized
+  );
+
+  return internalName || normalized;
+};
+
+// Convert internal name to display name
+export const getPaymentMethodDisplay = (method: string): string => {
+  return (
+    PAYMENT_METHOD_MAPPINGS[method as keyof typeof PAYMENT_METHOD_MAPPINGS] ||
+    method
+  );
+};

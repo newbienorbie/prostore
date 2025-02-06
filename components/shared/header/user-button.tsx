@@ -65,7 +65,7 @@ const UserButton = async () => {
           {/* extend nextauth session user type to include role: next-auth.d.ts */}
           {session?.user?.role === "admin" && (
             <DropdownMenuItem>
-              <Link href="/admin/overview" className="w-full">
+              <Link href="/admin/dashboard" className="w-full">
                 Admin
               </Link>
             </DropdownMenuItem>
