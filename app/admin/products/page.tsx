@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAllProducts } from "@/lib/actions/product.actions";
+import { getAllProducts, deleteProduct } from "@/lib/actions/product.actions";
 import { formatCurrency, formatId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Pagination from "@/components/shared/pagination";
+import DeleteDialog from "@/components/shared/delete-dialog";
 
 const AdminProductPage = async (props: {
   searchParams: Promise<{
@@ -66,18 +67,25 @@ const AdminProductPage = async (props: {
               <TableCell className="text-center">{product.category}</TableCell>
               <TableCell className="text-center">{product.stock}</TableCell>
               <TableCell className="text-center">{product.rating}</TableCell>
-              <TableCell className="flex gap-1 justify-around">
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`admin/products/${product.id}`}>Edit</Link>
-                </Button>
-                {/* delete */}
+              <TableCell className="text-center">
+                <div className="flex flex-col md:flex-row justify-center gap-1">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="sm:mt-2 lg:ml-2"
+                  >
+                    <Link href={`/admin/products/${product.id}`}>Edit</Link>
+                  </Button>
+                  <DeleteDialog id={product.id} action={deleteProduct} />
+                </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      {products.totalPages && products.totalPages > 1 && (
+      {products.totalPages > 1 && (
         <Pagination page={page} totalPages={products.totalPages} />
       )}
     </div>
