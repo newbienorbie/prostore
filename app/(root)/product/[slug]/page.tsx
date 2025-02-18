@@ -7,6 +7,7 @@ import ProductPrice from "@/components/shared/product/product-price";
 import ProductImages from "@/components/shared/product/product-images";
 import AddToCart from "@/components/shared/product/add-to-cart";
 import { getMyCart } from "@/lib/actions/cart.actions";
+import { Star } from "lucide-react";
 
 const ProductDetailsPage = async (props: {
   params: Promise<{ slug: string }>;
@@ -17,6 +18,24 @@ const ProductDetailsPage = async (props: {
   if (!product) notFound();
 
   const cart = await getMyCart();
+
+  const renderStars = (rating: string) => {
+    const stars = [];
+    const numStars = parseInt(rating);
+    const maxStars = 5;
+
+    for (let i = 0; i < numStars; i++) {
+      stars.push(<Star key={i} className="text-yellow-400 fill-yellow-400" />);
+    }
+
+    for (let i = numStars; i < maxStars; i++) {
+      stars.push(
+        <Star key={i + numStars} className="text-gray-300 fill-gray-300" />
+      );
+    }
+
+    return stars;
+  };
 
   return (
     <>
@@ -33,9 +52,14 @@ const ProductDetailsPage = async (props: {
                 {product.brand} {product.category}
               </p>
               <h1 className="h3-bold">{product.name}</h1>
-              <p>
-                {product.rating} of {product.numReviews} reviews
-              </p>
+              <div className="flex">
+                {renderStars(product.rating)}
+                <p className="ml-2">
+                  out of {product.numReviews}
+                  {product.numReviews === 1 ? " review" : " reviews"}
+                </p>
+              </div>
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 ">
                 <ProductPrice
                   value={Number(product.price)}

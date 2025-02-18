@@ -39,11 +39,17 @@ export async function getAllProducts({
   limit = PAGE_SIZE,
   page,
   category,
+  price,
+  rating,
+  sort,
 }: {
   query: string;
   limit?: number;
   page: number;
   category?: string;
+  price?: string;
+  rating?: string;
+  sort?: string;
 }) {
   // Query filter
   const queryFilter: Prisma.ProductWhereInput =
@@ -56,9 +62,41 @@ export async function getAllProducts({
         }
       : {};
 
+  // category filter
+  const categoryFilter =
+    category && category !== "all"
+      ? {
+          category,
+        }
+      : {};
+
+  // price filter
+  const priceFilter: Prisma.ProductWhereInput =
+    price && price !== "all"
+      ? {
+          price: {
+            gte: Number(price.split("-")[0]),
+            lte: Number(price.split("-")[1]),
+          },
+        }
+      : {};
+
+  // rating filter
+  const ratingFilter: Prisma.ProductWhereInput =
+    rating && rating !== "all"
+      ? {
+          rating: {
+            gte: Number(rating),
+          },
+        }
+      : {};
+
   const data = await prisma.product.findMany({
     where: {
       ...queryFilter,
+      ...categoryFilter,
+      ...priceFilter,
+      ...ratingFilter,
     },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * limit,
@@ -143,4 +181,25 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>) {
       message: formatError(error),
     };
   }
+}
+
+// get all categories
+export async function getAllCategories() {
+  const data = await prisma.product.groupBy({
+    by: ["category"],
+    _count: true,
+  });
+
+  return data;
+}
+
+// get featured products
+export async function getFeaturedProducts() {
+  const data = await prisma.product.findMany({
+    where: { isFeatured: true },
+    orderBy: { createdAt: "desc" },
+    take: 4,
+  });
+
+  return convertToPlainObject(data);
 }
