@@ -206,3 +206,8 @@ export const getPaymentMethodDisplay = (method: string): string => {
     method
   );
 };
+
+// format rating
+export function formatRating(rating: number): string {
+  return rating.toFixed(2);
+}

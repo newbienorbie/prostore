@@ -7,7 +7,9 @@ import ProductPrice from "@/components/shared/product/product-price";
 import ProductImages from "@/components/shared/product/product-images";
 import AddToCart from "@/components/shared/product/add-to-cart";
 import { getMyCart } from "@/lib/actions/cart.actions";
-import { Star } from "lucide-react";
+import ReviewList from "./review-list";
+import { auth } from "@/auth";
+import Rating from "@/components/shared/product/rating";
 
 const ProductDetailsPage = async (props: {
   params: Promise<{ slug: string }>;
@@ -17,25 +19,10 @@ const ProductDetailsPage = async (props: {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
+  const session = await auth();
+  const userId = session?.user.id;
+
   const cart = await getMyCart();
-
-  const renderStars = (rating: string) => {
-    const stars = [];
-    const numStars = parseInt(rating);
-    const maxStars = 5;
-
-    for (let i = 0; i < numStars; i++) {
-      stars.push(<Star key={i} className="text-yellow-400 fill-yellow-400" />);
-    }
-
-    for (let i = numStars; i < maxStars; i++) {
-      stars.push(
-        <Star key={i + numStars} className="text-gray-300 fill-gray-300" />
-      );
-    }
-
-    return stars;
-  };
 
   return (
     <>
@@ -52,13 +39,12 @@ const ProductDetailsPage = async (props: {
                 {product.brand} {product.category}
               </p>
               <h1 className="h3-bold">{product.name}</h1>
-              <div className="flex">
-                {renderStars(product.rating)}
-                <p className="ml-2">
-                  out of {product.numReviews}
-                  {product.numReviews === 1 ? " review" : " reviews"}
-                </p>
-              </div>
+              <Rating value={Number(product.rating)} />
+              <p>
+                {" "}
+                {product.numReviews}{" "}
+                {product.numReviews === 1 ? "review" : "reviews"}{" "}
+              </p>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 ">
                 <ProductPrice
@@ -111,6 +97,15 @@ const ProductDetailsPage = async (props: {
             </Card>
           </div>
         </div>
+      </section>
+
+      <section className="my-10">
+        <h2 className="h2-bold">Customer Reviews</h2>
+        <ReviewList
+          userId={userId || ""}
+          productId={product.id}
+          productSlug={product.slug}
+        />
       </section>
     </>
   );
