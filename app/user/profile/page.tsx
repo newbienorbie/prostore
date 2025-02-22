@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { auth } from "@/auth";
 import { SessionProvider } from "next-auth/react";
-import { Session } from "inspector/promises";
 import ProfileForm from "./profile-form";
 
 export const metadata: Metadata = {
