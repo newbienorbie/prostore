@@ -9,7 +9,7 @@ import {
 } from "../validators";
 import { auth, signIn, signOut } from "@/auth";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { compareSync, hashSync } from "bcrypt-ts-edge";
+import { compare, hash } from "../encrypt";
 import { prisma } from "@/db/prisma";
 import {
   formatError,
@@ -26,11 +26,12 @@ import {
 } from "../constants";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { getMyCart } from "./cart.actions";
 
 // sign in the user with credentials
 export async function signInWithCredentials(
   prevState: unknown,
-  formData: FormData
+  formData: FormData,
 ) {
   try {
     const user = signInFormSchema.parse({
@@ -47,7 +48,7 @@ export async function signInWithCredentials(
       return { success: false, message: "Invalid email or password" };
     }
 
-    const isMatch = compareSync(user.password, dbUser.password);
+    const isMatch = await compare(user.password, dbUser.password);
     if (!isMatch) {
       return { success: false, message: "Invalid email or password" };
     }
@@ -67,6 +68,8 @@ export async function signInWithCredentials(
 
 // sign user out
 export async function signOutUser() {
+  const currentCart = await getMyCart();
+  await prisma.cart.delete({ where: { id: currentCart?.id } });
   await signOut({ redirect: true, redirectTo: "/sign-in" });
 }
 
@@ -82,7 +85,7 @@ export async function signUpuser(prevState: unknown, formData: FormData) {
 
     const plainPassword = user.password;
 
-    user.password = hashSync(user.password, 10);
+    user.password = await hash(user.password);
 
     await prisma.user.create({
       data: {
@@ -118,7 +121,7 @@ export async function getUserById(userId: string) {
 
   // Get internal format for payment method
   const paymentMethod = normalizePaymentMethod(
-    user.paymentMethod || DEFAULT_PAYMENT_METHOD
+    user.paymentMethod || DEFAULT_PAYMENT_METHOD,
   );
 
   // Return user with normalized payment method
@@ -158,7 +161,7 @@ export async function updateUserAddress(data: ShippingAddress) {
 
 // update user's payment method
 export async function updateUserPaymentMethod(
-  data: z.infer<typeof paymentMethodSchema>
+  data: z.infer<typeof paymentMethodSchema>,
 ) {
   try {
     const session = await auth();
@@ -178,7 +181,7 @@ export async function updateUserPaymentMethod(
     // Type assertion here is safe because we've validated it through the schema
     if (
       !PAYMENT_METHODS_INTERNAL.includes(
-        internalPaymentMethod as PaymentMethodType
+        internalPaymentMethod as PaymentMethodType,
       )
     ) {
       throw new Error("Invalid payment method");
