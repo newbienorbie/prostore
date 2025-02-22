@@ -4,6 +4,7 @@ import PaymentMethodForm from "./payment-method-form";
 import CheckoutSteps from "@/components/shared/checkout-steps";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { PaymentMethodType, PAYMENT_METHODS_INTERNAL } from "@/lib/constants";
 
 async function getCompletedSteps(): Promise<number[]> {
   try {
@@ -32,16 +33,20 @@ const PaymentMethodPage = async () => {
     redirect("/shipping-address");
   }
 
+  // Convert user.paymentMethod to PaymentMethodType or null
+  const paymentMethod =
+    user.paymentMethod &&
+    PAYMENT_METHODS_INTERNAL.includes(user.paymentMethod as PaymentMethodType)
+      ? (user.paymentMethod as PaymentMethodType)
+      : null;
+
   // If we're here, both login and shipping are done
   const updatedSteps = Array.from(new Set([...completedSteps, 0, 1]));
 
   return (
     <main className="container">
       <CheckoutSteps current={2} completedSteps={updatedSteps} />
-      <PaymentMethodForm
-        preferredPaymentMethod={user.paymentMethod}
-        completedSteps={updatedSteps}
-      />
+      <PaymentMethodForm preferredPaymentMethod={paymentMethod} />
     </main>
   );
 };
