@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/auth";
 import { getMyCart } from "@/lib/actions/cart.actions";
 import { getUserById } from "@/lib/actions/user.actions";
@@ -51,7 +53,7 @@ const PlaceOrderPage = async () => {
   const updatedSteps = Array.from(new Set([...completedSteps, 0, 1, 2]));
   const userAddress = user.address as ShippingAddress;
   const paymentMethodDisplay = getPaymentMethodDisplay(
-    user.paymentMethod as PaymentMethodType
+    user.paymentMethod as PaymentMethodType,
   );
 
   return (
